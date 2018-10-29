@@ -11,6 +11,16 @@
       <add position="before"><![CDATA[public function addtocart() {
 
     $product_id = $this->request->get['product_id'];
+    $option_vals = array();
+    if (strlen($product_id) > 12) {
+        $product_id = intval(substr($product_id, 0, count($product_id) - 13));
+        $option_vals = array(intval(ltrim(substr($product_id, -12, 6), '0')), intval(ltrim(substr($product_id, -6), '0')));
+    }
+    elseif (strlen($product_id) > 6) {
+        $product_id = intval(substr($product_id, 0, count($product_id) - 7));
+        $option_vals = array(intval(ltrim(substr($product_id, -6), '0')));
+    }
+
     $quantity = (isset($this->request->get['quantity']) ? $this->request->get['quantity'] : 1);
     $option = array();
     $recurring_id = 0;
@@ -27,6 +37,12 @@
         if ($product_option['required'] && empty($option[$product_option['product_option_id']])) {
           $this->response->redirect($this->url->link('product/product', 'product_id=' . $product_id));
           exit;
+        }
+        foreach ($product_option['product_option_value'] as $option_value) {
+            if (in_array($option_value['product_option_value_id'], $option_vals)) {
+              $option[$product_option['product_option_id']] = $product_option['value'];
+              break;
+            }
         }
       }
 
