@@ -1,16 +1,28 @@
 <modification>
   <name>GET Cart API</name>
-  <version>1.0</version>
+  <version>1.1</version>
   <link>https://github.com/releu/get-cart-api</link>
-  <author>releu</author>
+  <author>releu and toporchillo</author>
   <code>get-cart-api</code>
 
   <file path="catalog/controller/product/product.php">
     <operation>
       <search ><![CDATA[public function index()]]></search>
       <add position="before"><![CDATA[public function addtocart() {
+    $prod_id = $this->request->get['product_id'];
+    $option_vals = array();
+    if (strlen($prod_id) > 12) {
+      $product_id = intval(substr($prod_id, 0, count($product_id) - 13));
+      $option_vals = array(intval(ltrim(substr($prod_id, -12, 6), '0')), intval(ltrim(substr($prod_id, -6), '0')));
+    }
+    elseif (strlen($prod_id) > 6) {
+      $product_id = intval(substr($prod_id, 0, count($prod_id) - 7));
+      $option_vals = array(intval(ltrim(substr($prod_id, -6), '0')));
+    }
+    else {
+		  $product_id = $prod_id;
+	  }
 
-    $product_id = $this->request->get['product_id'];
     $quantity = (isset($this->request->get['quantity']) ? $this->request->get['quantity'] : 1);
     $option = array();
     $recurring_id = 0;
@@ -24,12 +36,17 @@
       $product_options = $this->model_catalog_product->getProductOptions($product_id);
 
       foreach ($product_options as $product_option) {
-        if ($product_option['required'] && empty($option[$product_option['product_option_id']])) {
-          $this->response->redirect($this->url->link('product/product', 'product_id=' . $product_id));
-          exit;
+		    foreach ($product_option['product_option_value'] as $option_value) {
+			    if (in_array($option_value['product_option_value_id'], $option_vals)) {
+			      $option[$product_option['product_option_id']] = $option_value['product_option_value_id'];
+			    }
+		    }
+	    }
+      foreach ($product_options as $product_option) {
+        if ($product_option['required'] && empty($option[$product_option['product_option_id']]) && is_array($product_option['product_option_value'])) {
+          $option[$product_option['product_option_id']] = $product_option['product_option_value'][0]['product_option_value_id'];
         }
       }
-
       $this->cart->add($product_id, $quantity, $option, $recurring_id);
 
       unset($this->session->data['shipping_method']);
